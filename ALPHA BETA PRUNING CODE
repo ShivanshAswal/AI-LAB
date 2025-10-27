@@ -1,0 +1,83 @@
+def negate(literal):
+    return literal[1:] if literal.startswith("~") else "~" + literal
+
+def resolve(ci, cj):
+    resolvents = []
+    for lit1 in ci:
+        for lit2 in cj:
+            if lit1 == negate(lit2):
+                new_clause = list(set(ci + cj))
+                new_clause.remove(lit1)
+                new_clause.remove(lit2)
+                resolvents.append((new_clause, lit1, lit2))
+    return resolvents
+
+def resolution_algorithm(clauses):
+    new = set()
+    tree = {}
+    step = 0
+
+    while True:
+        pairs = [(clauses[i], clauses[j]) for i in range(len(clauses)) for j in range(i+1, len(clauses))]
+        for (ci, cj) in pairs:
+            results = resolve(ci, cj)
+            for (resolvent, lit1, lit2) in results:
+                step += 1
+                resolvent_tuple = tuple(sorted(resolvent))
+                if resolvent_tuple not in tree:
+                    tree[resolvent_tuple] = ((tuple(ci), tuple(cj)), (lit1, lit2))
+                print(f"\nStep {step}: Resolving {ci} and {cj} on {lit1} / {lit2} ⇒ {resolvent}")
+
+                if resolvent == []:
+                    print("\n🎉 Contradiction (empty clause) found!")
+                    print("✅ Query is PROVED TRUE by Resolution.\n")
+                    print("🌳 Resolution Tree (Trace):\n")
+                    print_tree(tree, resolvent_tuple)
+                    return True
+
+                new.add(resolvent_tuple)
+
+        if new.issubset(set(map(tuple, clauses))):
+            print("\n⚠️ No contradiction found. Query CANNOT be proved from the Knowledge Base.")
+            return False
+
+        for clause in new:
+            if list(clause) not in clauses:
+                clauses.append(list(clause))
+
+def print_tree(tree, final_clause):
+    def helper(clause, indent=""):
+        if clause not in tree:
+            print(indent + "Clause: " + str(list(clause)))
+            return
+        parents, resolved = tree[clause]
+        lit1, lit2 = resolved
+        print(indent + f"Clause: {list(clause)}  (resolved {lit1}/{lit2})")
+        print(indent + " ├─ From:")
+        helper(parents[0], indent + " │  ")
+        print(indent + " └─ And:")
+        helper(parents[1], indent + "    ")
+
+    helper(final_clause)
+
+print("🧠 FIRST ORDER LOGIC RESOLUTION SYSTEM (with Tree)")
+print("---------------------------------------------------")
+
+n = int(input("Enter number of statements in the Knowledge Base: "))
+kb = []
+for i in range(n):
+    stmt = input(f"Enter statement {i+1} (in CNF using ∨ for OR): ")
+    kb.append(stmt)
+
+query = input("\nEnter the query to prove: ")
+
+negated_query = "~" + query if not query.startswith("~") else query[1:]
+
+clauses = [stmt.replace(" ", "").split("∨") for stmt in kb]
+clauses.append([negated_query])
+
+print("\n📜 Clauses for Resolution:")
+for i, c in enumerate(clauses, 1):
+    print(f"{i}. {c}")
+
+resolution_algorithm(clauses)
