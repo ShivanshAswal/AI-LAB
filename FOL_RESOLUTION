@@ -1,0 +1,64 @@
+from itertools import combinations
+
+def parse_clause(clause):
+    return set(lit.strip() for lit in clause.split('∨'))
+
+def negate_literal(literal):
+    return literal[1:] if literal.startswith('¬') else '¬' + literal
+
+def resolve(ci, cj):
+    resolvents = []
+    for di in ci:
+        for dj in cj:
+            if di == negate_literal(dj):
+                new_clause = (ci - {di}) | (cj - {dj})
+                resolvents.append(new_clause)
+    return resolvents
+
+def resolution(clauses):
+    clauses = [parse_clause(c) for c in clauses]
+    new = set()
+    while True:
+        pairs = list(combinations(clauses, 2))
+        for (ci, cj) in pairs:
+            resolvents = resolve(ci, cj)
+            if set() in resolvents:
+                return True
+            for r in resolvents:
+                new.add(frozenset(r))
+        if new.issubset(set(map(frozenset, clauses))):
+            return False
+        for c in new:
+            if c not in clauses:
+                clauses.append(set(c))
+
+def main():
+    print("=== Resolution in First-Order Logic (FOL) ===")
+    print("Enter all sentences in Conjunctive Normal Form (CNF).")
+    print("Use '∨' for OR, '¬' for NOT, commas to separate arguments if any.")
+    print("Example: ¬Likes(John,Peanuts) ∨ Eats(John,Peanuts)\n")
+
+    n = int(input("Enter number of premises: "))
+    premises = []
+    for i in range(n):
+        premise = input(f"Enter premise {i+1} in CNF: ").strip()
+        premises.append(premise)
+
+    conclusion = input("Enter conclusion in CNF: ").strip()
+
+    negated_conclusion = ['¬' + conclusion if not conclusion.startswith('¬') else conclusion[1:]]
+    all_clauses = premises + negated_conclusion
+
+    print("\n--- Starting Resolution ---")
+    print("Premises:")
+    for p in premises:
+        print("  ", p)
+    print("Negated Conclusion:", negated_conclusion[0])
+
+    if resolution(all_clauses):
+        print("\n✅ Conclusion follows from premises (contradiction found).")
+    else:
+        print("\n❌ Conclusion does not follow from premises.")
+
+if __name__ == "__main__":
+    main()
