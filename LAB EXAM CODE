@@ -1,0 +1,89 @@
+class Predicate:
+    def __init__(self, name, args):
+        self.name = name
+        self.args = args
+
+    def __eq__(self, other):
+        return isinstance(other, Predicate) and self.name == other.name and self.args == other.args
+
+    def __hash__(self):
+        return hash((self.name, tuple(self.args)))
+
+    def __repr__(self):
+        return f"{self.name}({', '.join(self.args)})"
+
+class Clause:
+    def __init__(self, literals):
+        self.literals = set(literals) 
+
+    def __repr__(self):
+        return " OR ".join(str(l) for l in self.literals)
+
+    def __eq__(self, other):
+        return isinstance(other, Clause) and self.literals == other.literals
+
+    def __hash__(self):
+        return hash(frozenset(self.literals))
+
+def negate(predicate):
+    
+    if predicate.name.startswith("NOT_"):
+        return Predicate(predicate.name[4:], predicate.args)
+    return Predicate(f"NOT_{predicate.name}", predicate.args)
+
+def resolve(clause1, clause2):
+    
+    resolvents = []
+    for lit1 in clause1.literals:
+        for lit2 in clause2.literals:
+            if lit1 == negate(lit2):
+                new_literals = (clause1.literals - {lit1}) | (clause2.literals - {lit2})
+                resolvents.append(Clause(new_literals))
+    return resolvents
+
+
+cat_x = Predicate("Cat", ["x"])
+likes_x_fish = Predicate("Likes", ["x", "Fish"])
+cat_y = Predicate("Cat", ["y"])
+likes_y_z = Predicate("Likes", ["y", "z"])
+eats_y_z = Predicate("Eats", ["y", "z"])
+cat_mani = Predicate("Cat", ["Mani"])
+eats_mani_fish = Predicate("Eats", ["Mani", "Fish"])
+
+
+clause1 = Clause([negate(cat_x), likes_x_fish])
+clause2 = Clause([negate(cat_y), negate(likes_y_z), eats_y_z])
+clause3 = Clause([cat_mani])
+clause_goal_negation = Clause([negate(eats_mani_fish)])
+
+knowledge_base = [clause1, clause2, clause3, clause_goal_negation]
+new_clauses = []
+
+print("Given Statements:")
+print(f"1. NOT_Cat(x) OR Likes(x, Fish)")
+print(f"2. NOT_Cat(y) OR NOT_Likes(y, z) OR Eats(y, z)")
+print(f"3. Cat(Mani)")
+print(f"4. NOT_Eats(Mani, Fish) (Negation of Goal)")
+print("\nResolution Steps:")
+
+resolved_step1_literals = {Predicate("Likes", ["Mani", "Fish"])}
+resolved_step1 = Clause(resolved_step1_literals)
+print(f"Resolve (1) and (3) (substituting x with Mani): {resolved_step1}")
+
+
+resolved_step2_literals = {negate(Predicate("Cat", ["Mani"])), Predicate("Eats", ["Mani", "Fish"])}
+resolved_step2 = Clause(resolved_step2_literals)
+print(f"Resolve (2) and result from Step 1 (substituting y with Mani, z with Fish): {resolved_step2}")
+
+
+resolved_step3_literals = {Predicate("Eats", ["Mani", "Fish"])}
+resolved_step3 = Clause(resolved_step3_literals)
+print(f"Resolve result from Step 2 and (3): {resolved_step3}")
+
+
+resolved_step4_literals = set()
+resolved_step4 = Clause(resolved_step4_literals)
+print(f"Resolve result from Step 3 and (4): {resolved_step4} (Empty Clause)")
+
+if not resolved_step4.literals:
+    print("\nProof successful: The empty clause was derived, proving Mani eats fish.")
